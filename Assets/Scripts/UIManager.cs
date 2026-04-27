@@ -10,8 +10,10 @@ public class UIManager : MonoBehaviour
 
     public TMP_Text jarvisTimeText;
     public TMP_Text grahamTimeText;
+    public TMP_Text triangulationTimeText;
     public marcheDeJarvisScript jarvisScript;
-    public TriangulationIncrementale triangulation;
+    public TriangulationIncrementale triangulationScript;
+    public Graham grahamScript;
 
     public void OnClearClicked()
     {
@@ -20,6 +22,7 @@ public class UIManager : MonoBehaviour
 
         jarvisTimeText.text = "Jarvis : -";
         grahamTimeText.text = "Graham : -";
+        triangulationTimeText.text = "Triangulation : -";
     }
 
     public void OnRandom10Clicked()
@@ -56,27 +59,41 @@ public class UIManager : MonoBehaviour
 
     public void OnGrahamClicked()
     {
-        // Temporaire en attendant l'algo de ton collègue
-        List<Vector2> hull = new List<Vector2>(pointManager.Points);
+        if (pointManager.Points.Count < 3)
+        {
+            hullRenderer.ClearAll();
+            grahamTimeText.text = "Graham : pas assez de points";
+            return;
+        }
+
+        Stopwatch stopwatch = Stopwatch.StartNew();
+
+        List<Vector2> hull = grahamScript.ComputeHull(pointManager.Points);
+
+        stopwatch.Stop();
 
         hullRenderer.DrawHull(hull);
-        grahamTimeText.text = "Graham : non branché";
+
+        grahamTimeText.text = $"Graham : {stopwatch.Elapsed.TotalMilliseconds:F4} ms";
     }
 
     public void OnTriangulationClicked()
     {
-        Debug.Log("Bouton Triangulation cliqué");
-
         if (pointManager.Points.Count < 3)
         {
-            Debug.LogWarning("Il faut au moins 3 points pour trianguler.");
+            hullRenderer.ClearAll();
+            triangulationTimeText.text = "Triangulation : pas assez de points";
             return;
         }
 
-        triangulation.RunFromPoints(pointManager.Points);
+        Stopwatch stopwatch = Stopwatch.StartNew();
 
-        hullRenderer.DrawEdges(triangulation.edges);
+        triangulationScript.RunFromPoints(pointManager.Points);
 
-        Debug.Log("Triangulation terminée.");
+        stopwatch.Stop();
+
+        hullRenderer.DrawEdges(triangulationScript.edges);
+
+        triangulationTimeText.text = $"Triangulation : {stopwatch.Elapsed.TotalMilliseconds:F4} ms";
     }
 }

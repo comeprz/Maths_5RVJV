@@ -3,25 +3,20 @@ using System.Collections.Generic;
 
 public class Graham : MonoBehaviour
 {
+    private List<Vector2> arrayPoint = new List<Vector2>();
+    private List<(Vector2, Vector2)> linePoint = new List<(Vector2, Vector2)>();
 
-    List<Vector2> arrayPoint = new List<Vector2>();
-    List<(Vector2, Vector2)> LinePoint = new List<(Vector2, Vector2)>();
-    void Start()
+    public List<Vector2> ComputeHull(List<Vector2> points)
     {
-        StartGraham();
+        arrayPoint = new List<Vector2>(points);
+        return StartGraham();
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-
-    }
-
-    Vector2 getBarycentre()
+    Vector2 GetBarycentre()
     {
         float sumX = 0;
         float sumY = 0;
+
         for (int i = 0; i < arrayPoint.Count; i++)
         {
             sumX += arrayPoint[i].x;
@@ -37,17 +32,20 @@ public class Graham : MonoBehaviour
     List<Vector2> TriePoint(List<Vector2> trie, Vector2 center)
     {
         Vector2 firstVector = center - Vector2.right;
-        
+
         List<(float angle, Vector2 point)> listAngle = new List<(float, Vector2)>();
-        foreach(Vector2 vector in trie) {
+
+        foreach (Vector2 vector in trie)
+        {
             Vector2 secondVector = center - vector;
-            float angle = Vector2.SignedAngle(firstVector,secondVector);
+            float angle = Vector2.SignedAngle(firstVector, secondVector);
             listAngle.Add((angle, vector));
         }
 
         listAngle.Sort((a, b) => a.angle.CompareTo(b.angle));
 
         List<Vector2> result = new List<Vector2>();
+
         foreach (var item in listAngle)
         {
             result.Add(item.point);
@@ -60,43 +58,68 @@ public class Graham : MonoBehaviour
     {
         Vector2 a = current - prev;
         Vector2 b = next - current;
+
         float cross = a.x * b.y - a.y * b.x;
+
         return cross > 0;
     }
 
-    void StartGraham()
+    List<Vector2> StartGraham()
     {
-        Vector2 Bcenter = getBarycentre();
-        List<Vector2> L = TriePoint(arrayPoint, Bcenter);
-        var Sinit = L[0];
-        var pivot = Sinit;
-        var avance = true;
-        var index = 0;
+        linePoint.Clear();
 
-        while (pivot != Sinit || avance == false)
+        if (arrayPoint.Count < 3)
         {
-            int prev = (index - 1 + L.Count) % L.Count;
-            int next = (index + 1) % L.Count;
+            Debug.LogWarning("Il faut au moins 3 points pour Graham.");
+            return new List<Vector2>();
+        }
 
-            if (EstConvexe(L[prev], L[index], L[next]))
+        Vector2 barycentre = GetBarycentre();
+        List<Vector2> L = TriePoint(arrayPoint, barycentre);
+
+        bool hasRemovedPoint = true;
+        int security = 0;
+
+        while (hasRemovedPoint && L.Count >= 3)
+        {
+            hasRemovedPoint = false;
+
+            for (int index = 0; index < L.Count; index++)
             {
-                index = (index + 1) % L.Count;
-                pivot = L[index];
-                avance = true;
+                int prev = (index - 1 + L.Count) % L.Count;
+                int next = (index + 1) % L.Count;
+
+                if (!EstConvexe(L[prev], L[index], L[next]))
+                {
+                    L.RemoveAt(index);
+                    hasRemovedPoint = true;
+                    break;
+                }
             }
-            else
+
+            security++;
+
+            if (security > 10000)
             {
-                L.RemoveAt(index);
-                index = (index - 1 + L.Count) % L.Count;
-                pivot = L[index];
-                avance = false;
+                Debug.LogWarning("Sécurité Graham : boucle arrêtée.");
+                break;
             }
         }
 
-        for (int i = 0; i < L.Count-1; i++)
+        for (int i = 0; i < L.Count - 1; i++)
         {
-            LinePoint.Add((L[i], L[i + 1]));
+            linePoint.Add((L[i], L[i + 1]));
         }
-        LinePoint.Add((L[L.Count - 1], L[0]));
+
+        linePoint.Add((L[L.Count - 1], L[0]));
+
+        Debug.Log($"Graham : {L.Count} points dans l'enveloppe.");
+
+        return L;
+    }
+
+    public List<(Vector2, Vector2)> GetLinePoint()
+    {
+        return linePoint;
     }
 }
