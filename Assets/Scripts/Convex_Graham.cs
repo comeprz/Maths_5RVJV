@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class PointManager
+public class Convex_Graham
 {
     
 }
