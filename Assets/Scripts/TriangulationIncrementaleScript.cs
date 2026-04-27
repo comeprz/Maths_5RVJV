@@ -15,6 +15,11 @@ public class TriangulationIncrementale : MonoBehaviour
 
     void Start()
     {
+    }
+
+    public void RunFromPoints(List<Vector2> points)
+    {
+        arrayPoint = new List<Vector2>(points);
         Run();
     }
 

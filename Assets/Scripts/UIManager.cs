@@ -11,11 +11,12 @@ public class UIManager : MonoBehaviour
     public TMP_Text jarvisTimeText;
     public TMP_Text grahamTimeText;
     public marcheDeJarvisScript jarvisScript;
+    public TriangulationIncrementale triangulation;
 
     public void OnClearClicked()
     {
         pointManager.ClearPoints();
-        hullRenderer.ClearHull();
+        hullRenderer.ClearAll();
 
         jarvisTimeText.text = "Jarvis : -";
         grahamTimeText.text = "Graham : -";
@@ -35,8 +36,6 @@ public class UIManager : MonoBehaviour
 
     public void OnJarvisClicked()
     {
-        Debug.Log("Bouton Jarvis cliqué");
-
         if (pointManager.Points.Count < 3)
         {
             hullRenderer.ClearHull();
@@ -62,5 +61,22 @@ public class UIManager : MonoBehaviour
 
         hullRenderer.DrawHull(hull);
         grahamTimeText.text = "Graham : non branché";
+    }
+
+    public void OnTriangulationClicked()
+    {
+        Debug.Log("Bouton Triangulation cliqué");
+
+        if (pointManager.Points.Count < 3)
+        {
+            Debug.LogWarning("Il faut au moins 3 points pour trianguler.");
+            return;
+        }
+
+        triangulation.RunFromPoints(pointManager.Points);
+
+        hullRenderer.DrawEdges(triangulation.edges);
+
+        Debug.Log("Triangulation terminée.");
     }
 }
