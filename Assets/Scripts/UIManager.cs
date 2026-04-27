@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using System.Diagnostics;
+using Stopwatch = System.Diagnostics.Stopwatch;
 using TMPro;
 using UnityEngine;
 
@@ -10,6 +10,7 @@ public class UIManager : MonoBehaviour
 
     public TMP_Text jarvisTimeText;
     public TMP_Text grahamTimeText;
+    public marcheDeJarvisScript jarvisScript;
 
     public void OnClearClicked()
     {
@@ -34,11 +35,24 @@ public class UIManager : MonoBehaviour
 
     public void OnJarvisClicked()
     {
-        // Temporaire en attendant l'algo de ton collègue
-        List<Vector2> hull = new List<Vector2>(pointManager.Points);
+        Debug.Log("Bouton Jarvis cliqué");
+
+        if (pointManager.Points.Count < 3)
+        {
+            hullRenderer.ClearHull();
+            jarvisTimeText.text = "Jarvis : pas assez de points";
+            return;
+        }
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        List<Vector2> hull = jarvisScript.ComputeHull(pointManager.Points);
+
+        stopwatch.Stop();
 
         hullRenderer.DrawHull(hull);
-        jarvisTimeText.text = "Jarvis : non branché";
+
+        jarvisTimeText.text = $"Jarvis : {stopwatch.Elapsed.TotalMilliseconds:F4} ms";
     }
 
     public void OnGrahamClicked()

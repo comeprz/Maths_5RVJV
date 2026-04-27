@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 
 public class PointManager : MonoBehaviour
 {
@@ -11,12 +12,25 @@ public class PointManager : MonoBehaviour
 
     public event Action OnPointsChanged;
 
+    void Start()
+    {
+        Debug.Log("PointManager actif");
+    }
+
     void Update()
     {
-        if (Input.GetMouseButtonDown(0))
+        if (Mouse.current == null)
+            return;
+
+        if (Mouse.current.leftButton.wasPressedThisFrame)
         {
+            Debug.Log("Clic détecté");
+
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            {
+                Debug.Log("Clic bloqué par UI");
                 return;
+            }
 
             AddPointFromMouse();
         }
@@ -24,11 +38,14 @@ public class PointManager : MonoBehaviour
 
     void AddPointFromMouse()
     {
-        Vector3 mouseScreenPos = Input.mousePosition;
-        mouseScreenPos.z = -mainCamera.transform.position.z;
+        Vector2 mousePosition = Mouse.current.position.ReadValue();
+
+        Vector3 mouseScreenPos = new Vector3(mousePosition.x, mousePosition.y, -mainCamera.transform.position.z);
 
         Vector3 worldPos = mainCamera.ScreenToWorldPoint(mouseScreenPos);
         Vector2 point = new Vector2(worldPos.x, worldPos.y);
+
+        Debug.Log("Point ajouté : " + point);
 
         Points.Add(point);
         OnPointsChanged?.Invoke();
