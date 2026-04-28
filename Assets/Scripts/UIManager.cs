@@ -39,6 +39,12 @@ public class UIManager : MonoBehaviour
         hullRenderer.ClearHull();
     }
 
+    public void OnRandom1000Clicked()
+    {
+        pointManager.GenerateRandomPoints(1000);
+        hullRenderer.ClearHull();
+    }
+
     public void OnJarvisClicked()
     {
         if (pointManager.Points.Count < 3)

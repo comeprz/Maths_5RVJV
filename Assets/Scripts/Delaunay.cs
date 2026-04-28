@@ -36,6 +36,7 @@ public class Delaunay : MonoBehaviour
             return;
         }
         
+        // Tri abscisses puis ordonnées
         sortedPoints = arrayPoint
             .OrderBy(p => p.x)
             .ThenBy(p => p.y)
@@ -87,6 +88,7 @@ public class Delaunay : MonoBehaviour
         Debug.Log($"Delaunay : {triangles.Count} triangles, {edges.Count} arêtes");
     }
     
+    // Début du nuage, vérifier que les points ne sont pas alignés
     int InitializeColinearEdges()
     {
         int k = 1;
@@ -112,6 +114,7 @@ public class Delaunay : MonoBehaviour
         return k;
     }
 
+    // Crée le 1er triangle
     void BuildInitialTriangulation(int k)
     {
         Vector2 pk1 = sortedPoints[k]; // P_{k+1}
@@ -130,26 +133,23 @@ public class Delaunay : MonoBehaviour
         for (int i = 0; i < k; i++) hull.Add(sortedPoints[i]);
         hull.Add(pk1);
         
+        // Sens trigo
         if (SignedArea(hull) < 0f) hull.Reverse();
     }
     
+    // Ajout des points dans la triangulation
     void AddPoint(Vector2 p)
     {
         List<int> visibleEdgeIndices = new List<int>();
         int n = hull.Count;
 
+        // Parcours des arêtes
         for (int i = 0; i < n; i++)
         {
             Vector2 a = hull[i];
             Vector2 b = hull[(i + 1) % n];
             if (IsEdgeVisibleFrom(a, b, p))
                 visibleEdgeIndices.Add(i);
-        }
-
-        if (visibleEdgeIndices.Count == 0)
-        {
-            Debug.LogWarning($"Point {p} à l'intérieur du hull - ignoré.");
-            return;
         }
 
         // 3b) Pour chaque arête vue : créer un triangle [A, B, P]
@@ -160,6 +160,7 @@ public class Delaunay : MonoBehaviour
             triangles.Add((a, b, p));
         }
         
+        // Évite d'ajouter la même arête plusieurs fois
         HashSet<Vector2> visitedVerts = new HashSet<Vector2>();
         foreach (int idx in visibleEdgeIndices)
         {
@@ -216,16 +217,19 @@ public class Delaunay : MonoBehaviour
         hull = newHull;
     }
     
+    // Produit vectoriel
     static float Cross(Vector2 o, Vector2 a, Vector2 b)
     {
         return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
     }
     
+    // Vérifier la colinéarité
     static bool Colinear(Vector2 a, Vector2 b, Vector2 c, float epsilon = 1e-6f)
     {
         return Mathf.Abs(Cross(a, b, c)) < epsilon;
     }
     
+    // A droite de l'arête => visible
     static bool IsEdgeVisibleFrom(Vector2 a, Vector2 b, Vector2 p)
     {
         return Cross(a, b, p) < 0f;
@@ -247,6 +251,7 @@ public class Delaunay : MonoBehaviour
     // Delaunay
     private const float EPSILON = 1e-5f;
 
+    // Flip en fonction d'un nombre max d'itérations
     public void FlipToDelaunay()
     {
         int flipCount = 0;
@@ -273,6 +278,7 @@ public class Delaunay : MonoBehaviour
         Debug.Log($"Flipping Delaunay terminé : {flipCount} flips.");
     }
 
+    // Flip en fonction des règles
     bool TryFlipFirstIllegalEdge()
     {
         for (int i = 0; i < triangles.Count; i++)
@@ -284,7 +290,7 @@ public class Delaunay : MonoBehaviour
                 if (!GetAdjacentTriangles(triangles[i], triangles[j], out a, out b, out c, out d))
                     continue;
 
-                // Sécurité : les deux triangles doivent être de part et d'autre de l'arête commune.
+                // Sécurité : les deux triangles doivent être de part et d'autre de l'arête commune
                 if (!AreOnOppositeSides(a, b, c, d))
                     continue;
 
@@ -294,7 +300,7 @@ public class Delaunay : MonoBehaviour
                 if (!illegal)
                     continue;
 
-                // Flip : ancienne arête a-b remplacée par nouvelle arête c-d.
+                // Flip : arête a-b remplacée par nouvelle arête c-d
                 triangles[i] = MakeCCWTriangle(c, d, a);
                 triangles[j] = MakeCCWTriangle(d, c, b);
 
@@ -305,6 +311,7 @@ public class Delaunay : MonoBehaviour
         return false;
     }
 
+    // Cherche si 2 triangles partagent le même sommet
     bool GetAdjacentTriangles(
         (Vector2, Vector2, Vector2) t1,
         (Vector2, Vector2, Vector2) t2,
@@ -354,6 +361,7 @@ public class Delaunay : MonoBehaviour
         return triangle.Item3;
     }
 
+    // Point dans le cercle circonscrit ?
     bool PointInCircumcircle(Vector2 p, (Vector2, Vector2, Vector2) triangle)
     {
         Vector2 center;
@@ -405,11 +413,13 @@ public class Delaunay : MonoBehaviour
         return (a, b, c);
     }
 
+    // 2 sommets opposés
     bool AreOnOppositeSides(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
     {
         float sideC = Cross(a, b, c);
         float sideD = Cross(a, b, d);
 
+        // Produit vectoriel négatif
         return sideC * sideD < -EPSILON;
     }
 
