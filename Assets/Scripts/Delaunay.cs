@@ -311,7 +311,7 @@ public class Delaunay : MonoBehaviour
         return false;
     }
 
-    // Cherche si 2 triangles partagent le même sommet
+    // Cherche si 2 triangles partagent la même arête
     bool GetAdjacentTriangles(
         (Vector2, Vector2, Vector2) t1,
         (Vector2, Vector2, Vector2) t2,
@@ -338,18 +338,22 @@ public class Delaunay : MonoBehaviour
             }
         }
 
+        // Nbr de points en commun != 2 => Non
         if (shared.Count != 2)
             return false;
 
+        // Arête commune AB
         a = shared[0];
         b = shared[1];
 
+        // C => 1er triangle, D => 2ème triangle
         c = GetOppositeVertex(t1, a, b);
         d = GetOppositeVertex(t2, a, b);
 
         return true;
     }
 
+    // Sommet opposé
     Vector2 GetOppositeVertex((Vector2, Vector2, Vector2) triangle, Vector2 a, Vector2 b)
     {
         if (!SamePoint(triangle.Item1, a) && !SamePoint(triangle.Item1, b))
@@ -405,6 +409,7 @@ public class Delaunay : MonoBehaviour
         return true;
     }
 
+    // Bon sens trigo
     (Vector2, Vector2, Vector2) MakeCCWTriangle(Vector2 a, Vector2 b, Vector2 c)
     {
         if (Cross(a, b, c) < 0f)
@@ -449,17 +454,20 @@ public class Delaunay : MonoBehaviour
         edges.Add((a, b));
     }
 
+    // Même arête ?
     bool SameEdge(Vector2 a1, Vector2 b1, Vector2 a2, Vector2 b2)
     {
         return SamePoint(a1, a2) && SamePoint(b1, b2) ||
             SamePoint(a1, b2) && SamePoint(b1, a2);
     }
 
+    // Même point ?
     bool SamePoint(Vector2 a, Vector2 b)
     {
         return (a - b).sqrMagnitude < EPSILON * EPSILON;
     }
 
+    // Contient le point ?
     bool ContainsPoint(List<Vector2> points, Vector2 p)
     {
         foreach (Vector2 point in points)
