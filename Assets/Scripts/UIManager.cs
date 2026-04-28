@@ -11,9 +11,11 @@ public class UIManager : MonoBehaviour
     public TMP_Text jarvisTimeText;
     public TMP_Text grahamTimeText;
     public TMP_Text triangulationTimeText;
+    public TMP_Text delaunayTimeText;
     public marcheDeJarvisScript jarvisScript;
     public TriangulationIncrementale triangulationScript;
     public Graham grahamScript;
+    public Delaunay delaunayScript;
 
     public void OnClearClicked()
     {
@@ -95,5 +97,25 @@ public class UIManager : MonoBehaviour
         hullRenderer.DrawEdges(triangulationScript.edges);
 
         triangulationTimeText.text = $"Triangulation : {stopwatch.Elapsed.TotalMilliseconds:F4} ms";
+    }
+
+    public void OnDelaunayClicked()
+    {
+        if (pointManager.Points.Count < 3)
+        {
+            hullRenderer.ClearAll();
+            delaunayTimeText.text = "Delaunay : pas assez de points";
+            return;
+        }
+
+        Stopwatch stopwatch = Stopwatch.StartNew();
+
+        delaunayScript.RunDelaunayFromPoints(pointManager.Points);
+
+        stopwatch.Stop();
+
+        hullRenderer.DrawEdges(delaunayScript.edges);
+
+        delaunayTimeText.text = $"Delaunay : {stopwatch.Elapsed.TotalMilliseconds:F4} ms";
     }
 }
