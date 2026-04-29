@@ -154,22 +154,19 @@ public class Voronoi : MonoBehaviour
                 Vector2 center = circumcenters[triIndices[0]];
                 Vector2 mid = (a + b) * 0.5f;
 
-                Vector2 dir = (mid - center);
+                var tri = delaunay.triangles[triIndices[0]];
+                Vector2 opposite = GetOppositeVertex(tri, a, b);
 
-                if (dir.sqrMagnitude < EPSILON * EPSILON)
-                {
-                    Vector2 edgeDir = (b - a).normalized;
-                    dir = new Vector2(-edgeDir.y, edgeDir.x);
-                }
-                else
-                {
-                    dir = dir.normalized;
-                }
+                Vector2 edgeDir = (b - a).normalized;
+                Vector2 perp = new Vector2(-edgeDir.y, edgeDir.x);
+
+                if (Vector2.Dot(perp, opposite - mid) > 0f)
+                    perp = -perp;
 
                 float rayLength = ComputeExtent() * 2f;
 
                 start = center;
-                end = center + dir * rayLength;
+                end = center + perp * rayLength;
             }
             else
             {
@@ -262,6 +259,15 @@ public class Voronoi : MonoBehaviour
         }
 
         return Mathf.Max(maxX - minX, maxY - minY);
+    }
+
+    Vector2 GetOppositeVertex((Vector2, Vector2, Vector2) triangle, Vector2 a, Vector2 b)
+    {
+        if (!SamePoint(triangle.Item1, a) && !SamePoint(triangle.Item1, b))
+            return triangle.Item1;
+        if (!SamePoint(triangle.Item2, a) && !SamePoint(triangle.Item2, b))
+            return triangle.Item2;
+        return triangle.Item3;
     }
 
     bool TryGetCircumcircle(Vector2 a, Vector2 b, Vector2 c,
