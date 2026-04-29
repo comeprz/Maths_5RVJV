@@ -24,6 +24,34 @@ public class UIManager : MonoBehaviour
     public convexeIncremental3DScript convex3DScript;
     public TMP_Text convex3DTimeText;
 
+    private bool voronoi = false;
+
+
+    public void FixedUpdate()
+    {
+        if (voronoi)
+        {
+            if (pointManager.Points.Count < 3)
+            {
+                hullRenderer.ClearAll();
+                voronoiTimeText.text = "Voronoï : pas assez de points";
+                return;
+            }
+
+            Stopwatch stopwatch = Stopwatch.StartNew();
+
+            voronoiScript.RunFromPoints(pointManager.Points);
+
+            stopwatch.Stop();
+
+            List<(Vector2, Vector2)> allEdges = new List<(Vector2, Vector2)>();
+            allEdges.AddRange(voronoiScript.voronoiEdges);
+
+            hullRenderer.DrawEdges(allEdges);
+
+            voronoiTimeText.text = $"Voronoï : {stopwatch.Elapsed.TotalMilliseconds:F4} ms";
+        }
+    }
     public void OnClearClicked()
     {
         pointManager.ClearPoints();
@@ -136,25 +164,7 @@ public class UIManager : MonoBehaviour
 
     public void OnVoronoiClicked()
     {
-        if (pointManager.Points.Count < 3)
-        {
-            hullRenderer.ClearAll();
-            voronoiTimeText.text = "Voronoï : pas assez de points";
-            return;
-        }
-
-        Stopwatch stopwatch = Stopwatch.StartNew();
-
-        voronoiScript.RunFromPoints(pointManager.Points);
-
-        stopwatch.Stop();
-
-        List<(Vector2, Vector2)> allEdges = new List<(Vector2, Vector2)>();
-        allEdges.AddRange(voronoiScript.voronoiEdges);
-
-        hullRenderer.DrawEdges(allEdges);
-
-        voronoiTimeText.text = $"Voronoï : {stopwatch.Elapsed.TotalMilliseconds:F4} ms";
+        voronoi = !voronoi;
     }
 
     public void OnClear3DClicked()
