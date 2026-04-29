@@ -391,8 +391,10 @@ public class Delaunay : MonoBehaviour
         float cx = c.x;
         float cy = c.y;
 
+        // Déterminant principal
         float d = 2f * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by));
 
+        // Déterminant nul = c'est mort
         if (Mathf.Abs(d) < EPSILON)
             return false;
 
