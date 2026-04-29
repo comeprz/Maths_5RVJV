@@ -17,6 +17,11 @@ public class UIManager : MonoBehaviour
     public Graham grahamScript;
     public Delaunay delaunayScript;
 
+    public PointManager3D pointManager3D;
+    public HullRenderer3D hullRenderer3D;
+    public convexeIncremental3DScript convex3DScript;
+    public TMP_Text convex3DTimeText;
+
     public void OnClearClicked()
     {
         pointManager.ClearPoints();
@@ -123,5 +128,50 @@ public class UIManager : MonoBehaviour
         hullRenderer.DrawEdges(delaunayScript.edges);
 
         delaunayTimeText.text = $"Delaunay : {stopwatch.Elapsed.TotalMilliseconds:F4} ms";
+    }
+
+    public void OnClear3DClicked()
+    {
+        pointManager3D.ClearPoints();
+        hullRenderer3D.ClearAll();
+        convex3DTimeText.text = "Convex 3D : -";
+    }
+
+    public void OnRandom3D10Clicked()
+    {
+        pointManager3D.GenerateRandomPoints(10);
+        hullRenderer3D.ClearHull();
+    }
+
+    public void OnRandom3D100Clicked()
+    {
+        pointManager3D.GenerateRandomPoints(100);
+        hullRenderer3D.ClearHull();
+    }
+
+    public void OnRandom3D1000Clicked()
+    {
+        pointManager3D.GenerateRandomPoints(1000);
+        hullRenderer3D.ClearHull();
+    }
+
+    public void OnConvex3DClicked()
+    {
+        if (pointManager3D.Points.Count < 4)
+        {
+            hullRenderer3D.ClearHull();
+            convex3DTimeText.text = "Convex 3D : pas assez de points (min 4)";
+            return;
+        }
+
+        Stopwatch stopwatch = Stopwatch.StartNew();
+
+        List<int> triangles = convex3DScript.ComputeHull(pointManager3D.Points);
+
+        stopwatch.Stop();
+
+        hullRenderer3D.DrawHull(convex3DScript.GetVertices(), triangles);
+
+        convex3DTimeText.text = $"Convex 3D : {stopwatch.Elapsed.TotalMilliseconds:F4} ms";
     }
 }
