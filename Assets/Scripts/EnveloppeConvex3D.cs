@@ -51,7 +51,7 @@ public class convexeIncremental3DScript : MonoBehaviour
 
         if (arrayPoint.Count < 4)
         {
-            Debug.LogWarning("Il faut au moins 4 points non-coplanaires pour l'enveloppe convexe 3D");
+            Debug.LogWarning("Il faut au moins 4 points non-coplanaires pour l'enveloppe convexe 3D.");
             return;
         }
 
@@ -63,6 +63,7 @@ public class convexeIncremental3DScript : MonoBehaviour
 
         DistributeInitialPoints();
 
+        var iterations = 0;
         while (true)
         {
             var faceWithPoints = GetFaceWithOutsidePoints();
@@ -79,13 +80,43 @@ public class convexeIncremental3DScript : MonoBehaviour
             var newFaces = BuildCone(horizon, eyeIndex);
 
             RedistributeOrphans(newFaces, orphans);
+
+            iterations++;
+            if (iterations > arrayPoint.Count * 2)
+            {
+                Debug.LogError($"Convex 3D : trop d'itérations ({iterations}), abandon. Bug probable.");
+                break;
+            }
+        }
+
+        var pointsOutside = 0;
+        var maxDistOut = 0f;
+        for (var i = 0; i < arrayPoint.Count; i++)
+        {
+            var p = arrayPoint[i];
+            foreach (var f in faces)
+            {
+                var dist = SignedDistance(f, p);
+                if (dist > epsilon)
+                {
+                    pointsOutside++;
+                    if (dist > maxDistOut) maxDistOut = dist;
+                    break;
+                }
+            }
+        }
+        if (pointsOutside > 0)
+        {
+            Debug.LogWarning($"Convex 3D : {pointsOutside} points sont à l'extérieur du hull final (max dist = {maxDistOut:F4}). Itérations : {iterations}, faces : {faces.Count}");
+        }
+        else
+        {
+            Debug.Log($"Convex 3D OK : {iterations} itérations, {faces.Count} faces.");
         }
     }
 
     bool BuildInitialTetrahedron()
     {
-        // On prend simplement les 4 premiers points
-        // p0, p1, p2 non-colinéaires et p3 non-coplanaire avec eux
         var i0 = 0;
         var i1 = 1;
         var i2 = 2;
@@ -95,44 +126,46 @@ public class convexeIncremental3DScript : MonoBehaviour
         var p1 = arrayPoint[i1];
         var p2 = arrayPoint[i2];
         var p3 = arrayPoint[i3];
-
-        // p0, p1, p2 ne sont pas colinéaires
+        
         var planeNormal = Vector3.Cross(p1 - p0, p2 - p0);
         if (planeNormal.sqrMagnitude < epsilon * epsilon)
             return false;
 
         var planeD = Vector3.Dot(planeNormal, p0);
-
-        // p3 n'est pas dans le plan de (p0, p1, p2)
+        
         var distP3 = Vector3.Dot(planeNormal, p3) - planeD;
         if (Mathf.Abs(distP3) < epsilon)
             return false;
 
-        Face base_, side1, side2, side3;
-        if (distP3 > 0f)
-        {
-            // (p0, p1, p2) a sa normale vers p3 -> il faut inverser pour la base
-            base_ = MakeFace(i0, i2, i1);
-            side1 = MakeFace(i0, i1, i3);
-            side2 = MakeFace(i1, i2, i3);
-            side3 = MakeFace(i2, i0, i3);
-        }
-        else
-        {
-            base_ = MakeFace(i0, i1, i2);
-            side1 = MakeFace(i1, i0, i3);
-            side2 = MakeFace(i2, i1, i3);
-            side3 = MakeFace(i0, i2, i3);
-        }
+        var f0 = MakeFaceOriented(i0, i1, i2, p3); // face opposée à p3
+        var f1 = MakeFaceOriented(i0, i1, i3, p2); // face opposée à p2
+        var f2 = MakeFaceOriented(i0, i2, i3, p1); // face opposée à p1
+        var f3 = MakeFaceOriented(i1, i2, i3, p0); // face opposée à p0
 
-        LinkFaces(base_, side1);
-        LinkFaces(base_, side2);
-        LinkFaces(base_, side3);
-        LinkFaces(side1, side2);
-        LinkFaces(side2, side3);
-        LinkFaces(side3, side1);
+        LinkFaces(f0, f1);
+        LinkFaces(f0, f2);
+        LinkFaces(f0, f3);
+        LinkFaces(f1, f2);
+        LinkFaces(f1, f3);
+        LinkFaces(f2, f3);
 
         return true;
+    }
+
+    Face MakeFaceOriented(int a, int b, int c, Vector3 outsidePoint)
+    {
+        var pa = arrayPoint[a];
+        var pb = arrayPoint[b];
+        var pc = arrayPoint[c];
+
+        var normal = Vector3.Cross(pb - pa, pc - pa);
+        var distOut = Vector3.Dot(normal, outsidePoint) - Vector3.Dot(normal, pa);
+
+        if (distOut > 0f)
+        {
+            return MakeFace(a, c, b);
+        }
+        return MakeFace(a, b, c);
     }
 
     Face MakeFace(int a, int b, int c)
@@ -177,7 +210,6 @@ public class convexeIncremental3DScript : MonoBehaviour
 
     void DistributeInitialPoints()
     {
-        // Récupérer les 4 sommets utilisés par le tétraèdre pour les exclure
         var usedIndices = new HashSet<int>();
         foreach (var f in faces)
         {
@@ -268,6 +300,7 @@ public class convexeIncremental3DScript : MonoBehaviour
         return Vector3.Dot(face.normal, p) - face.d;
     }
 
+
     List<HorizonEdge> GetHorizon(List<Face> visibleFaces)
     {
         var horizon = new List<HorizonEdge>();
@@ -339,43 +372,48 @@ public class convexeIncremental3DScript : MonoBehaviour
         }
     }
 
-
     List<Face> BuildCone(List<HorizonEdge> horizon, int eyeIndex)
     {
         var newFaces = new List<Face>();
-
-        // Pour chaque triangle (edge.a, edge.b, eyeIndex) :
-        //   - arête (eye, a) "sort" du sommet a -> on enregistre dans leftMap
-        //   - arête (b, eye) "entre" dans le sommet b -> on enregistre dans rightMap
-        // Chaque sommet du horizon apparaît dans exactement 2 arêtes du horizon
-        // (une fois comme "a", une fois comme "b"), donc à la fin chaque entrée
-        // de leftMap a son partenaire dans rightMap.
-        var leftMap = new Dictionary<int, Face>();
-        var rightMap = new Dictionary<int, Face>();
+        var pendingByVertex = new Dictionary<int, (Face face, int slot)>();
 
         foreach (var edge in horizon)
         {
             var tri = MakeFace(edge.a, edge.b, eyeIndex);
             newFaces.Add(tri);
-
+            
             tri.neighbors[2] = edge.neighbor;
             edge.neighbor.neighbors[edge.neighborSlot] = tri;
-
-            leftMap[edge.a] = tri;
-            rightMap[edge.b] = tri;
+            TryConnectLateralEdge(pendingByVertex, edge.b, tri, 0);
+            TryConnectLateralEdge(pendingByVertex, edge.a, tri, 1);
         }
 
-        foreach (var kv in leftMap)
-        {
-            var vertex = kv.Key;
-            var leftTri = kv.Value;
-            var rightTri = rightMap[vertex];
-
-            leftTri.neighbors[1] = rightTri;
-            rightTri.neighbors[0] = leftTri;
-        }
-
+        WarnIfPendingNotEmpty(pendingByVertex);
         return newFaces;
+    }
+
+    void TryConnectLateralEdge(
+        Dictionary<int, (Face face, int slot)> pending,
+        int vertex, Face face, int slot)
+    {
+        if (pending.TryGetValue(vertex, out var other))
+        {
+            face.neighbors[slot] = other.face;
+            other.face.neighbors[other.slot] = face;
+            pending.Remove(vertex);
+        }
+        else
+        {
+            pending[vertex] = (face, slot);
+        }
+    }
+
+    void WarnIfPendingNotEmpty(Dictionary<int, (Face face, int slot)> pending)
+    {
+        if (pending.Count != 0)
+        {
+            Debug.LogWarning($"BuildCone : {pending.Count} arêtes latérales non-reconnectées");
+        }
     }
 
     void RedistributeOrphans(List<Face> newFaces, List<int> orphans)

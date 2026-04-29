@@ -12,6 +12,14 @@ public class PointManager : MonoBehaviour
 
     public event Action OnPointsChanged;
 
+    
+    public bool mode3D = false;
+
+    public void setMode3D()
+    {
+        mode3D = !mode3D;
+    }
+    
     void Start()
     {
         Debug.Log("PointManager actif");
@@ -38,6 +46,7 @@ public class PointManager : MonoBehaviour
 
     void AddPointFromMouse()
     {
+        if (!mode3D) return;
         Vector2 mousePosition = Mouse.current.position.ReadValue();
 
         Vector3 mouseScreenPos = new Vector3(mousePosition.x, mousePosition.y, -mainCamera.transform.position.z);
