@@ -6,7 +6,9 @@ using UnityEngine;
 public class UIManager : MonoBehaviour
 {
     public PointManager pointManager;
+    
     public HullRenderer hullRenderer;
+    public HullRenderer voronoiRenderer;
 
     public TMP_Text jarvisTimeText;
     public TMP_Text grahamTimeText;
@@ -23,39 +25,86 @@ public class UIManager : MonoBehaviour
     public HullRenderer3D hullRenderer3D;
     public convexeIncremental3DScript convex3DScript;
     public TMP_Text convex3DTimeText;
-
+    
     private bool voronoi = false;
+    private bool voronoiAnimate = false;
+    
+    [SerializeField] private float voronoiAnimAmplitude = 1.5f;
+    [SerializeField] private float voronoiAnimSpeed = 1.2f;
+    [SerializeField] private Vector2 voronoiAnimAxis = Vector2.right;
+
+    private List<Vector2> voronoiBasePositions = new List<Vector2>();
+    private List<float> voronoiPhases = new List<float>();
 
 
     public void FixedUpdate()
     {
-        if (voronoi)
+        if (!voronoi) return;
+
+        if (pointManager.Points.Count < 3)
         {
-            if (pointManager.Points.Count < 3)
-            {
-                hullRenderer.ClearAll();
-                voronoiTimeText.text = "Voronoï : pas assez de points";
-                return;
-            }
+            voronoiRenderer.ClearAll();
+            voronoiTimeText.text = "Voronoï : pas assez de points";
+            return;
+        }
 
-            Stopwatch stopwatch = Stopwatch.StartNew();
+        if (voronoiAnimate)
+            AnimateVoronoiPoints();
 
-            voronoiScript.RunFromPoints(pointManager.Points);
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        voronoiScript.RunFromPoints(pointManager.Points);
+        stopwatch.Stop();
 
-            stopwatch.Stop();
+        List<(Vector2, Vector2)> allEdges = new List<(Vector2, Vector2)>();
+        allEdges.AddRange(voronoiScript.voronoiEdges);
+        voronoiRenderer.DrawEdges(allEdges);
 
-            List<(Vector2, Vector2)> allEdges = new List<(Vector2, Vector2)>();
-            allEdges.AddRange(voronoiScript.voronoiEdges);
+        voronoiTimeText.text = $"Voronoï : {stopwatch.Elapsed.TotalMilliseconds:F4} ms";
+    }
 
-            hullRenderer.DrawEdges(allEdges);
+    private void AnimateVoronoiPoints()
+    {
+        var axis = voronoiAnimAxis.sqrMagnitude > 0.0001f
+            ? voronoiAnimAxis.normalized
+            : Vector2.right;
 
-            voronoiTimeText.text = $"Voronoï : {stopwatch.Elapsed.TotalMilliseconds:F4} ms";
+        for (var i = 0; i < voronoiBasePositions.Count && i < pointManager.Points.Count; i++)
+        {
+            var baseP = voronoiBasePositions[i];
+            var phase = voronoiPhases[i];
+            var offset = Mathf.Sin(Time.time * voronoiAnimSpeed + phase) * voronoiAnimAmplitude;
+            var newPos = baseP + axis * offset;
+
+            pointManager.SetPointPosition(i, newPos);
         }
     }
+
+    private void StartVoronoiAnimation()
+    {
+        voronoiBasePositions.Clear();
+        voronoiPhases.Clear();
+        for (var i = 0; i < pointManager.Points.Count; i++)
+        {
+            voronoiBasePositions.Add(pointManager.Points[i]);
+            voronoiPhases.Add(Random.Range(0f, 2f * Mathf.PI));
+        }
+    }
+
+    private void StopVoronoiAnimation()
+    {
+        for (var i = 0; i < voronoiBasePositions.Count && i < pointManager.Points.Count; i++)
+        {
+            pointManager.SetPointPosition(i, voronoiBasePositions[i]);
+        }
+        voronoiBasePositions.Clear();
+        voronoiPhases.Clear();
+    }
+
     public void OnClearClicked()
     {
         pointManager.ClearPoints();
         hullRenderer.ClearAll();
+        voronoiRenderer.ClearAll();
 
         jarvisTimeText.text = "Jarvis : -";
         grahamTimeText.text = "Graham : -";
@@ -68,18 +117,21 @@ public class UIManager : MonoBehaviour
     {
         pointManager.GenerateRandomPoints(10);
         hullRenderer.ClearHull();
+        voronoiRenderer.ClearAll();
     }
 
     public void OnRandom100Clicked()
     {
         pointManager.GenerateRandomPoints(100);
         hullRenderer.ClearHull();
+        voronoiRenderer.ClearAll();
     }
 
     public void OnRandom1000Clicked()
     {
         pointManager.GenerateRandomPoints(1000);
         hullRenderer.ClearHull();
+        voronoiRenderer.ClearAll();
     }
 
     public void OnJarvisClicked()
@@ -165,6 +217,27 @@ public class UIManager : MonoBehaviour
     public void OnVoronoiClicked()
     {
         voronoi = !voronoi;
+
+        if (!voronoi)
+        {
+            if (voronoiAnimate)
+            {
+                voronoiAnimate = false;
+                StopVoronoiAnimation();
+            }
+            voronoiRenderer.ClearAll();
+            voronoiTimeText.text = "Voronoï : -";
+        }
+    }
+
+    public void OnVoronoiAnimateClicked()
+    {
+        voronoiAnimate = !voronoiAnimate;
+
+        if (voronoiAnimate)
+            StartVoronoiAnimation();
+        else
+            StopVoronoiAnimation();
     }
 
     public void OnClear3DClicked()

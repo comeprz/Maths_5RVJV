@@ -70,4 +70,12 @@ public class PointManager : MonoBehaviour
 
         OnPointsChanged?.Invoke();
     }
+
+    public void SetPointPosition(int index, Vector2 newPos)
+    {
+        if (index < 0 || index >= Points.Count) return;
+
+        Points[index] = newPos;
+        OnPointsChanged?.Invoke();
+    }
 }
