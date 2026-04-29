@@ -12,10 +12,12 @@ public class UIManager : MonoBehaviour
     public TMP_Text grahamTimeText;
     public TMP_Text triangulationTimeText;
     public TMP_Text delaunayTimeText;
+    public TMP_Text voronoiTimeText;
     public marcheDeJarvisScript jarvisScript;
     public TriangulationIncrementale triangulationScript;
     public Graham grahamScript;
     public Delaunay delaunayScript;
+    public Voronoi voronoiScript;
 
     public PointManager3D pointManager3D;
     public HullRenderer3D hullRenderer3D;
@@ -30,6 +32,8 @@ public class UIManager : MonoBehaviour
         jarvisTimeText.text = "Jarvis : -";
         grahamTimeText.text = "Graham : -";
         triangulationTimeText.text = "Triangulation : -";
+        delaunayTimeText.text = "Delaunay : -";
+        voronoiTimeText.text = "Voronoï : -";
     }
 
     public void OnRandom10Clicked()
@@ -128,6 +132,29 @@ public class UIManager : MonoBehaviour
         hullRenderer.DrawEdges(delaunayScript.edges);
 
         delaunayTimeText.text = $"Delaunay : {stopwatch.Elapsed.TotalMilliseconds:F4} ms";
+    }
+
+    public void OnVoronoiClicked()
+    {
+        if (pointManager.Points.Count < 3)
+        {
+            hullRenderer.ClearAll();
+            voronoiTimeText.text = "Voronoï : pas assez de points";
+            return;
+        }
+
+        Stopwatch stopwatch = Stopwatch.StartNew();
+
+        voronoiScript.RunFromPoints(pointManager.Points);
+
+        stopwatch.Stop();
+
+        List<(Vector2, Vector2)> allEdges = new List<(Vector2, Vector2)>();
+        allEdges.AddRange(voronoiScript.voronoiEdges);
+
+        hullRenderer.DrawEdges(allEdges);
+
+        voronoiTimeText.text = $"Voronoï : {stopwatch.Elapsed.TotalMilliseconds:F4} ms";
     }
 
     public void OnClear3DClicked()
